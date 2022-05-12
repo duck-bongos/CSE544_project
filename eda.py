@@ -12,34 +12,44 @@ GROUP_11_STATES = ["MA", "MS"]
 
 
 if __name__ in "__main__":
-    df = pd.read_csv("United_States_COVID-19_Cases_and_Deaths_by_State_over_Time.csv")
-    vax = pd.read_csv("COVID-19_Vaccinations_in_the_United_States_Jurisdiction.csv")
+    cases_df = pd.read_csv(
+        "United_States_COVID-19_Cases_and_Deaths_by_State_over_Time.csv"
+    )
+    vax_df = pd.read_csv("COVID-19_Vaccinations_in_the_United_States_Jurisdiction.csv")
 
-    print(df.shape)
-    print(vax.shape)
+    # do all this for each state Massachussetts first
+    for state in GROUP_11_STATES:
+        # grab the relevant state
+        cases = cases_df[cases_df["state"] == state]
+        cases = cases.rename(columns={"submission_date": "date"})
+        vax = vax_df[vax_df["Location"] == state]
+        vax = vax.rename(columns={"Location": "state", "Date": "date"})
 
-    # sort by date
-    df["submission_date"] = pd.to_datetime(df["submission_date"])
-    vax["Date"] = pd.to_datetime(vax["Date"])
-    vax = vax.sort_values("Date", ascending=True)
-    df = df.sort_values("submission_date", ascending=True)
+        # update submission date to datetime for sorting
+        cases["date"] = pd.to_datetime(cases["date"])
+        vax["date"] = pd.to_datetime(vax["date"])
 
-    # filter to only the states I need and take the daily difference of total case increases
-    df_ms = df[df["state"] == "MS"]
-    df_ms[["tot_cases", "conf_cases", "prob_cases"]] = df_ms[
-        ["tot_cases", "conf_cases", "prob_cases"]
-    ].diff()
-    df_ma = df[df["state"] == "MA"]
-    df_ma[["tot_cases", "conf_cases", "prob_cases"]] = df_ma[
-        ["tot_cases", "conf_cases", "prob_cases"]
-    ].diff()
+        # sort by date
+        vax = vax.sort_values("date", ascending=True)
+        cases = cases.sort_values("date", ascending=True)
 
-    vax_ms = vax[vax["Location"] == "MS"]
-    vax_ma = vax[vax["Location"] == "MA"]
+        # cases columns to diff:
+        cases_cols_to_diff = ["tot_cases", "conf_cases", "prob_cases"]
+        cases.fillna(0, inplace=True)
+        cases[cases_cols_to_diff] = cases[cases_cols_to_diff].diff()
 
-    # what columns do I have? what columns need to be .diff() 'ed?
+        # vax columns to diff to de-cumulatize things
+        vax_cols_to_diff = vax.columns[3:]
+        vax.fillna(0, inplace=True)
+        vax[vax_cols_to_diff] = vax[vax_cols_to_diff].diff()
 
-    # .apply(
-    #    lambda x: datetime.strptime(x, "%m/%d/%Y")
-    # )
-    print(df.head())
+        ### STARTED PART 1 ###
+        # daily mean daily cases + covid deaths for February 2021
+        feb_2021 = cases.loc[
+            (cases["date"].dt.month == 2) & (cases["date"].dt.year == 2021)
+        ]
+        feb_2021_mean_deaths = feb_2021["tot_deaths"].mean()
+        feb_2021_mean_cases = feb_2021["tot_cases"].mean()
+
+        print(cases.head())
+        print(vax.head())
