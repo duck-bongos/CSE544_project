@@ -1,7 +1,7 @@
 from datetime import datetime
-
 import pandas as pd
-
+from utilities import tukey
+from vax import *
 
 def de_cumulate_column():
     pass
@@ -33,14 +33,17 @@ if __name__ in "__main__":
         vax = vax.sort_values("date", ascending=True)
         cases = cases.sort_values("date", ascending=True)
 
+        # extract the data we want
+        to_drop = set(vax.columns) - {'date', 'Administered'}
+        vax.drop(to_drop, axis=1, inplace=True)
+
         # cases columns to diff:
         cases_cols_to_diff = ["tot_cases", "conf_cases", "prob_cases"]
         cases.fillna(0, inplace=True)
         cases[cases_cols_to_diff] = cases[cases_cols_to_diff].diff()
 
         # vax columns to diff to de-cumulatize things
-        vax_cols_to_diff = vax.columns[3:]
-        vax[vax_cols_to_diff] = vax[vax_cols_to_diff].diff()
+        vax['Administered'] = vax['Administered'].diff()
 
         """
         ## DATA CLEANING - MANDATORY TASK 1 ##
@@ -59,11 +62,20 @@ if __name__ in "__main__":
         I mean it's weird how many rows have outliers for the vaccine data. might be worth looking into more.
 
         PLEASE TELL ME IF I NEED TO CHANGE ANYTHING.
+
+        Andrew comments for vaccine data:
+        Since we are taking the differences between cumulative totals each day,
+        we don't have data for how many vaccines were administered on the first
+        day, so we discard this day from the data set.
         """
+        print('Cleaning Vaccine Data in %s' % state)
 
         # dropna() to drop any rows with NaN in them, apply to both datasets
         cases.dropna(inplace=True)
+        vaxlen = vax.shape[0]
         vax.dropna(inplace=True)
+        # subtract 
+        print('Missing %d days of vaccine data' % (vaxlen - vax.shape[0] - 1))
 
         # worth resetting index at this point to make filtering easier
         cases = cases.reset_index()
@@ -99,22 +111,8 @@ if __name__ in "__main__":
         cases_high_outlier = cases_quantile_3 + (1.5 * cases_iqr)
 
         # repeat for vax data
-        # First quartile for each column
-        vax_quantile_1 = vax.describe().iloc[4, :]
-
-        # Third quartile for each column
-        vax_quantile_3 = vax.describe().iloc[6, :]
-
-        # Calculate interquartile range
-        vax_iqr = vax_quantile_3 - vax_quantile_1
-
-        # Calculate Tukey's rule  # formula is  x < Q1 - alpha * IQR || x > Q3 + alpha * IQR
-        vax_low_outlier = vax_quantile_1 - (1.5 * vax_iqr)
-        vax_high_outlier = vax_quantile_3 + (1.5 * vax_iqr)
-
-        # Find values that fall outside the range, excluding zeros
-        # this is the slash-and-burn approach where if there are ANY outliers
-        # within the row from any of the 10 numerical columns, drop the entire row
+        print("Applying Tukey's Rule")
+        newvax = tukey(vax, 'Administered')
 
         # find all the row indices where there's an outlier
         outlier_case_idx = (cases[cases_low_outlier.index] >= cases_low_outlier).all(
@@ -125,27 +123,13 @@ if __name__ in "__main__":
         cases = cases[outlier_case_idx]
 
         # count the number of rows with at least 1 outlier in it:
-        print(
-            f"Rows with outliers in case data: {len(outlier_case_idx) - outlier_case_idx.astype(int).sum()}"
-        )
-        print(
-            f"% Rows with outliers in vaccine data: {(len(outlier_case_idx) - outlier_case_idx.astype(int).sum())/ len(outlier_case_idx)}"
-        )
+        #print( f"Rows with outliers in case data: {len(outlier_case_idx) - outlier_case_idx.astype(int).sum()}")
+        #print( f"% Rows with outliers in vaccine data: {(len(outlier_case_idx) - outlier_case_idx.astype(int).sum())/ len(outlier_case_idx)}")
 
-        # find all the row indices where there's an outlier
-        outlier_vax_idx = (vax[vax_low_outlier.index] >= vax_low_outlier).all(
-            axis=1
-        ) & ((vax[vax_high_outlier.index] <= vax_high_outlier).all(axis=1))
+        print("Rows with outliers in vaccine data: %d" % (vax.shape[0] - newvax.shape[0]))
+        vax = newvax
 
-        print(
-            f"Rows with outliers in vaccine data: {len(outlier_vax_idx) - outlier_vax_idx.astype(int).sum()}"
-        )
-        print(
-            f"% Rows with outliers in vaccine data: {(len(outlier_vax_idx) - outlier_vax_idx.astype(int).sum())/ len(outlier_vax_idx)}"
-        )
-
-        # keep only rows where there are no outliers
-        vax = vax[outlier_vax_idx]
+        print()
 
         """Slash and burn, keep zero values. I admit, I, Dan Billmann, 
         have not tested the second half of this out.
@@ -158,16 +142,21 @@ if __name__ in "__main__":
         (cases[cases_high_outlier.index] >= cases_high_outlier).all(axis=1)) &
         (cases[cases_high_outlier.index] == 0)
         """
-        print()
 
         ### STARTED ANALYSIS PART 1 ###
         # daily mean daily cases + covid deaths for February 2021
-        feb_2021 = cases.loc[
-            (cases["date"].dt.month == 2) & (cases["date"].dt.year == 2021)
-        ]
-        feb_2021_mean_deaths = feb_2021["tot_deaths"].mean()
-        feb_2021_mean_cases = feb_2021["tot_cases"].mean()
+        #feb_2021 = cases.loc[
+        #    (cases["date"].dt.month == 2) & (cases["date"].dt.year == 2021)
+        #]
+        #feb_2021_mean_deaths = feb_2021["tot_deaths"].mean()
+        #feb_2021_mean_cases = feb_2021["tot_cases"].mean()
 
         ### STARTED PART 2 ###
-        print(cases.head())
-        print(vax.head())
+        #print(cases.head())
+        #print(vax.head())
+
+        ### PART D ###
+        part_d(vax)
+        
+
+        print()
