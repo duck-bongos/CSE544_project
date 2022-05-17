@@ -23,8 +23,9 @@ if __name__ in "__main__":
     df["date"] = pd.to_datetime(df["date"])
     df.sort_values("date", inplace=True)
     dfs = {st: {} for st in GROUP_11_STATES}
+
+    out_to_file = []
     for state in GROUP_11_STATES:
-        out_to_file = []
         for col in ["cases", "deaths"]:
             print("Cleaning %s data in state %s" % (col, state))
             st = df[["date", "state", col]]
@@ -41,7 +42,16 @@ if __name__ in "__main__":
             print("Number of rows with outliers: %d" % (stlen - st.shape[0]))
             dfs[state][col] = st
 
+            # part A
+            out_to_file.extend(part_a(st, state, col))
+
         print()
+
+    print("PART A")
+    with open("hypothesis_tests.txt", "w") as ht:
+        for line in out_to_file:
+            print(line)
+            ht.write(f"{line}")
 
     vax = pd.read_csv("COVID-19_Vaccinations_in_the_United_States_Jurisdiction.csv")
     vax = vax.rename(
