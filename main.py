@@ -2,6 +2,7 @@ from datetime import datetime
 import pandas as pd
 from utilities import tukey
 from vax import *
+from cases_deaths import *
 import sys
 
 # our states are Massachussetts and Mississippi.
@@ -28,6 +29,9 @@ if __name__ in "__main__":
 			print("Rows with outliers: %d" % (stlen - st.shape[0]))
 			dfs[state][col] = st
 		print()
+	
+	### PART C ###
+	part_c(dfs)
 
 	vax = pd.read_csv("COVID-19_Vaccinations_in_the_United_States_Jurisdiction.csv")
 	vax = vax.rename(columns={"Location": "state", "Date": "date", 'Administered': 'admin'})
