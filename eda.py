@@ -253,7 +253,7 @@ if __name__ in "__main__":
     vax["Administered_Dose1_Recip_65PlusPop_Pct"] = (
         vax["Administered_Dose1_Recip_65PlusPop_Pct"] / 100.0
     )
-    gun = gun[vax[(vax["date"] <= end_date) & (vax["date"] >= start_date)]][
+    gun = gun[gun[(gun.index <= end_date) & (gun.index >= start_date)]][
         "fatal_incident_rate"
     ]
     print(ks_test2(vax["Administered_Dose1_Recip_65PlusPop_Pct"], gun))
