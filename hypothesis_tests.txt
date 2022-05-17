@@ -1,0 +1,72 @@
+ONE SAMPLE TESTSState: MA | For t test: Population mean: 2040.107142857143
+T statistic: 3.1485753463642228, p-value 0.0016406842152274503, critical value: 2.0422724563012373
+This indicates we SHOULD reject the sample #cases from March as being part of the same distribution.
+
+State: MA | For walds test: Population mean: 2040.107142857143
+T statistic: -0.8866401212259736, p-value 1.624727314192186, critical value: 1.959963984540054
+This indicates we SHOULD NOT reject the sample #cases from March as being part of the same distribution.
+
+State: MA | For z test: Population mean: 2040.107142857143
+T statistic: 0.5655008260378037, p-value 0.5717331625899784, critical value: 1.959963984540054
+This indicates we SHOULD NOT reject the sample #cases from March as being part of the same distribution.
+
+TWO SAMPLE TESTSState: MA | For two sample t test: T statistic: 0.034390148417741156, p-value 0.9725660392503273, critical value: 2.0024654580545986
+This indicates we SHOULD NOT reject the sample #cases from March as being part of the same distribution.
+
+State: MA | For two sample walds test: T statistic: 1.9383660642086364, p-value 0.052578577615486566, critical value: 1.959963984540054
+This indicates we SHOULD NOT reject the sample #cases from March as being part of the same distribution.
+
+ONE SAMPLE TESTSState: MA | For t test: Population mean: 49.535714285714285
+T statistic: 12.500672447281906, p-value 0.0, critical value: 2.0422724563012373
+This indicates we SHOULD reject the sample #deaths from March as being part of the same distribution.
+
+State: MA | For walds test: Population mean: 49.535714285714285
+T statistic: -2.736511452379152, p-value 1.9937905566441942, critical value: 1.959963984540054
+This indicates we SHOULD reject the sample #deaths from March as being part of the same distribution.
+
+State: MA | For z test: Population mean: 49.535714285714285
+T statistic: 2.2451870504318503, p-value 0.024756127069215816, critical value: 1.959963984540054
+This indicates we SHOULD reject the sample #deaths from March as being part of the same distribution.
+
+TWO SAMPLE TESTSState: MA | For two sample t test: T statistic: 4.38728326218496, p-value 1.1477527181558145e-05, critical value: 2.0024654580545986
+This indicates we SHOULD reject the sample #deaths from March as being part of the same distribution.
+
+State: MA | For two sample walds test: T statistic: 6.841989008401062, p-value 7.810196933633051e-12, critical value: 1.959963984540054
+This indicates we SHOULD reject the sample #deaths from March as being part of the same distribution.
+
+ONE SAMPLE TESTSState: MS | For t test: Population mean: 664.9642857142857
+T statistic: 14.086445163163463, p-value 0.0, critical value: 2.0422724563012373
+This indicates we SHOULD reject the sample #cases from March as being part of the same distribution.
+
+State: MS | For walds test: Population mean: 664.9642857142857
+T statistic: -6.148283193329475, p-value 1.999999999216739, critical value: 1.959963984540054
+This indicates we SHOULD reject the sample #cases from March as being part of the same distribution.
+
+State: MS | For z test: Population mean: 664.9642857142857
+T statistic: 2.5300002380135767, p-value 0.011406244928343856, critical value: 1.959963984540054
+This indicates we SHOULD reject the sample #cases from March as being part of the same distribution.
+
+TWO SAMPLE TESTSState: MS | For two sample t test: T statistic: 0.5216057280903876, p-value 0.6019448742513462, critical value: 2.0024654580545986
+This indicates we SHOULD NOT reject the sample #cases from March as being part of the same distribution.
+
+State: MS | For two sample walds test: T statistic: 6.19900340260184, p-value 5.682181392074881e-10, critical value: 1.959963984540054
+This indicates we SHOULD reject the sample #cases from March as being part of the same distribution.
+
+ONE SAMPLE TESTSState: MS | For t test: Population mean: 11.75
+T statistic: 8.030289181914103, p-value 8.881784197001252e-16, critical value: 2.0422724563012373
+This indicates we SHOULD reject the sample #deaths from March as being part of the same distribution.
+
+State: MS | For walds test: Population mean: 11.75
+T statistic: -5.731085749176247, p-value 1.99999999002102, critical value: 1.959963984540054
+This indicates we SHOULD reject the sample #deaths from March as being part of the same distribution.
+
+State: MS | For z test: Population mean: 11.75
+T statistic: 1.4422825138800257, p-value 0.1492226910607255, critical value: 1.959963984540054
+This indicates we SHOULD NOT reject the sample #deaths from March as being part of the same distribution.
+
+TWO SAMPLE TESTSState: MS | For two sample t test: T statistic: 3.5697175338874847, p-value 0.00035736635619421087, critical value: 2.0024654580545986
+This indicates we SHOULD reject the sample #deaths from March as being part of the same distribution.
+
+State: MS | For two sample walds test: T statistic: 4.451560395332898, p-value 8.524854863356524e-06, critical value: 1.959963984540054
+This indicates we SHOULD reject the sample #deaths from March as being part of the same distribution.
+
