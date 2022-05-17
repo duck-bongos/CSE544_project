@@ -7,7 +7,7 @@ from typing import List, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scipy
+from scipy.stats import kstwo
 import scipy.stats as ss
 
 ALPHA = 0.025
@@ -15,6 +15,36 @@ ALPHA = 0.025
 
 def scale_dataset(x: np.array):
     return x / x.max()
+
+
+def ks_test2(d1, d2):
+    d1 = d1.sort_values().to_numpy()
+    d2 = d2.sort_values().to_numpy()
+    maxi = 0
+    if len(d1) > len(d2):
+        d1, d2 = d2, d1
+    n = len(d1)
+    i2 = 0
+    for i, d in enumerate(d1):
+        lo = i / n
+        hi = (i + 1) / n
+        while d2[i2] < d and i2 < len(d2) - 1:
+            i2 += 1
+        if d2[i2] >= d:
+            lo2 = i / len(d2)
+            maxi = max(maxi, abs(lo - lo2))
+            maxi = max(maxi, abs(hi - lo2))
+        if d2[i2] <= d:
+            hi2 = (i + 1) / len(d2)
+            maxi = max(maxi, abs(lo - hi2))
+            maxi = max(maxi, abs(hi - hi2))
+    # two sample KS test has a special formula for the value of n to use for KS distribution
+    # https://github.com/scipy/scipy/blob/v1.8.0/scipy/stats/_stats_py.py#L7275-L7449
+    n = len(d1)
+    m = len(d2)
+    ks_n = round(n * m / (n + m))
+    p = 1 - kstwo.cdf(maxi, ks_n)
+    return maxi, p
 
 
 def pearsons_correlation_coefficient(x1: np.array, x2: np.array):

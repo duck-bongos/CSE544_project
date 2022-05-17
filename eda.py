@@ -22,6 +22,7 @@ from utilities import (
     pearsons_correlation_coefficient,
     plot_cases_and_gun,
     scale_dataset,
+    ks_test2,
 )
 from vax import *
 
@@ -224,4 +225,36 @@ if __name__ in "__main__":
     p_value = ss.chi2.cdf(Q_Obs, deg_free)
     print(p_value)
 
+    # HYPOTHESIS 3
+    # what % of injuries are fatal:
+    gun = pd.read_csv("US-Gun-Violence.csv")
+
+    gun = gun.rename(columns={"incident_date": "date", "city_or_county": "region"})
+    gun = gun[["date", "killed", "injured"]]
+    gun["date"] = pd.to_datetime(gun["date"])
+    gun = gun.set_index("date")
+
+    gun["fatal_incident_rate"] = gun["killed"] / (gun["killed"] + gun["injured"])
+
+    vax = pd.read_csv("COVID-19_Vaccinations_in_the_United_States_Jurisdiction.csv")
+    vax = vax.rename(
+        columns={"Location": "state", "Date": "date", "Administered": "admin"}
+    )
+    vax["date"] = pd.to_datetime(vax["date"])
+
+    # start date
+    start_date = vax["date"].min()
+    # end date
+    end_date = gun.index.max()
+
+    vax = vax[(vax["date"] <= end_date) & (vax["date"] >= start_date)]
+
+    vax = vax[["date", "state", "Administered_Dose1_Recip_65PlusPop_Pct"]]
+    vax["Administered_Dose1_Recip_65PlusPop_Pct"] = (
+        vax["Administered_Dose1_Recip_65PlusPop_Pct"] / 100.0
+    )
+    gun = gun[vax[(vax["date"] <= end_date) & (vax["date"] >= start_date)]][
+        "fatal_incident_rate"
+    ]
+    print(ks_test2(vax["Administered_Dose1_Recip_65PlusPop_Pct"], gun))
     part_2()
