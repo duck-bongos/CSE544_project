@@ -4,6 +4,7 @@ from math import ceil
 from statistics import stdev
 from typing import List, Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy
@@ -12,9 +13,28 @@ import scipy.stats as ss
 ALPHA = 0.025
 
 
-def scale_data(data: np.array):
-    max_val = data.max()
-    return data / max_val
+def scale_dataset(x: np.array):
+    return x / x.max()
+
+
+def pearsons_correlation_coefficient(x1: np.array, x2: np.array):
+    # calculate covariance and divide that by σ_x1, σ_x2
+    mean_x1 = sum(x1) / len(x1)
+    mean_x2 = sum(x2) / len(x2)
+
+    # numerator term
+    cov = sum((x1 - mean_x1) * (x2 - mean_x2)) / (len(x1) - 1)
+
+    # E[X1**2]
+    exp_x1_sq = sum(x1 ** 2) / len(x1)
+
+    # E[X2**2]
+    exp_x2_sq = sum(x2 ** 2) / len(x2)
+
+    # Denominator term - sqrt(Variance_X1) * sqrt(Variance_X2)
+    denom = np.sqrt(exp_x1_sq - mean_x1 ** 2) * np.sqrt(exp_x2_sq - mean_x2 ** 2)
+
+    return cov / denom
 
 
 def permutation_test(l: List[List[int]], means=True, medians=False):
@@ -50,6 +70,46 @@ def permutation_test(l: List[List[int]], means=True, medians=False):
     p_value = sum([1 if a > t_obs else 0 for a in ab]) / len(ab)
     print(p_value)
     return p_value
+
+
+def plot_cases_and_gun(cases: pd.DataFrame, gun: pd.DataFrame) -> None:
+    fig, axs = plt.subplots(2)
+    fig.suptitle("Deaths and Injuries from Gun Violence")
+
+    axs0 = axs[0].twinx()
+    axs0.set_ylabel("COVID Cases")
+    axs[0].set_ylabel("Injuries")
+
+    axs[0].plot(
+        gun.index,
+        gun["injured"].values,
+        "r-",
+    )
+
+    axs0.plot(
+        gun[gun.index.isin(cases.index)].index,
+        cases["cases"].values,
+        label="COVID Cases",
+    )
+    axs[0].legend()
+    axs[0].tick_params(labelrotation=45)
+
+    axs1 = axs[1].twinx()
+    axs1.set_ylabel("COVID Cases")
+    axs1.plot(
+        gun[gun.index.isin(cases.index)].index,
+        cases["cases"].values,
+        "g-",
+        label="COVID Cases",
+    )
+
+    axs[1].set_ylabel("Deaths")
+    axs[1].plot(gun.index, gun["killed"].values, "r-", label="Killed")
+    axs[1].legend()
+    axs[1].tick_params(labelrotation=45)
+
+    fig.tight_layout()
+    plt.show()
 
 
 def walds_test(data: np.array, null_hypothesis: float) -> Tuple[float, float, float]:
