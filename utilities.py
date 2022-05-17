@@ -1,7 +1,11 @@
 from itertools import permutations
-from typing import List
-import numpy as np
 from math import ceil
+from typing import List, Tuple
+
+import numpy as np
+import pandas as pd
+import scipy.stats as ss
+
 
 def permutation_test(l: List[List[int]], means=True, medians=False):
     # calculate t_obs
@@ -37,16 +41,52 @@ def permutation_test(l: List[List[int]], means=True, medians=False):
     print(p_value)
     return p_value
 
+
+def t_test(data: np.array, pop_mean: float) -> Tuple[float, float]:
+    """Calculate (X_bar - mu)/(s/√n). Return p-value."""
+    x_bar = np.mean(data)
+    s_stdev = np.std(data)
+    n_count = len(data)
+
+    test_statistic = (x_bar - pop_mean) / (s_stdev / np.sqrt(n_count))
+    test_statistic = abs(test_statistic)
+
+    # return test statistic and p-value
+    return test_statistic, ss.t.cdf(test_statistic)
+
+
+def walds_test(data: np.array, null_hypo_value):
+    """(theta_hat - theta_null) / standard_error(theta_hat)"""
+    # return test statistic and p-value
+    return data, null_hypo_value
+
+
+def z_test(data: np.array, pop_mean: float, pop_stdev: float):
+    """Calculate (X_bar - mu)/sigma. Return p-value."""
+    if len(data) < 30:
+        print("Too few observations to properly run Z test")
+        return
+    else:
+        x_bar = data.mean()
+        test_statistic = abs((x_bar - pop_mean)) / pop_stdev
+
+        # return test statistic and p-value
+        return test_statistic, 2 * (1 - ss.norm.cdf(test_statistic))
+
+
 # manually calculate outliers
-def tukey(df, col):
+def tukey(df: pd.DataFrame, col: str):
     data = df[col].sort_values()
     data.reset_index(drop=True, inplace=True)
+
+    # calculate IQR
     q1 = ceil(25 / 100 * len(data))
     q3 = ceil(75 / 100 * len(data))
     iqr = data[q3] - data[q1]
     lo = data[q1] - 1.5 * iqr
     hi = data[q3] + 1.5 * iqr
-    print('Min\tQ1\tQ3\tMax')
-    print('%d\t%d\t%d\t%d' % (min(data), data[q1], data[q3], max(data)))
-    print('Discarding non-zero values outside of range [%d, %d]' % (lo, hi))
+
+    print("Min\tQ1\tQ3\tMax")
+    print("%d\t%d\t%d\t%d" % (min(data), data[q1], data[q3], max(data)))
+    print("Discarding non-zero values outside of range [%d, %d]" % (lo, hi))
     return df[(df[col] >= lo) & (df[col] <= hi) | (df[col] == 0)]
