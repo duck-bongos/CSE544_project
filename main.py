@@ -24,6 +24,9 @@ if __name__ in "__main__":
 	df.sort_values("date", inplace=True)
 	dfs = {st: {} for st in GROUP_11_STATES}
 
+	oldstdout = sys.stdout
+	sys.stdout = open('cleaning.log', 'w')
+
 	out_to_file = []
 	for state in GROUP_11_STATES:
 		for col in ["cases", "deaths"]:
@@ -42,18 +45,26 @@ if __name__ in "__main__":
 			print("Number of rows with outliers: %d" % (stlen - st.shape[0]))
 			dfs[state][col] = st
 		print()
+	sys.stdout.close()
 
+	sys.stdout = open('part_a.log', 'w')
 	### PART A ###
 	for state in dfs:
 		for col in dfs[state]:
 			part_a(dfs[state][col], state, col)
+	sys.stdout.close()
 	
 	### PART B ###
+	sys.stdout = open('part_b.log', 'w')
 	part_b(dfs)
+	sys.stdout.close()
 
 	### PART C ###
+	sys.stdout = open('part_c.log', 'w')
 	part_c(dfs)
+	sys.stdout.close()
 
+	sys.stdout = open('cleaning.log', 'a')
 	vax = pd.read_csv("COVID-19_Vaccinations_in_the_United_States_Jurisdiction.csv")
 	vax = vax.rename(
 		columns={"Location": "state", "Date": "date", "Administered": "admin"}
@@ -80,10 +91,15 @@ if __name__ in "__main__":
 		print("Rows with outliers in vaccine data: %d" % (stlen - st.shape[0]))
 		state_dfs.append(st)
 	print()
+	sys.stdout.close()
 
 	### PART D ###
+	sys.stdout = open('part_d.log', 'w')
 	for state, name in zip(state_dfs, GROUP_11_STATES):
 		part_d(state, name)
+	sys.stdout.close()
 
 	### PART E ###
+	sys.stdout = open('part_e.log', 'w')
 	part_e(*state_dfs, *GROUP_11_STATES)
+	sys.stdout.close()
