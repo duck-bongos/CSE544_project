@@ -13,12 +13,71 @@ from math import exp, log, sqrt, ceil
 from typing import List
 import matplotlib.pyplot as plt
 
-ALPHA = 0.025
+ALPHA = 0.05
 
 
-def scale_data(data: np.array):
-	max_val = data.max()
-	return data / max_val
+def pearsons_correlation_coefficient(x1: np.array, x2: np.array):
+	# calculate covariance and divide that by σ_x1, σ_x2
+	mean_x1 = sum(x1) / len(x1)
+	mean_x2 = sum(x2) / len(x2)
+
+	# numerator term
+	cov = sum((x1 - mean_x1) * (x2 - mean_x2)) / (len(x1) - 1)
+
+	# E[X1**2]
+	exp_x1_sq = sum(x1 ** 2) / len(x1)
+
+	# E[X2**2]
+	exp_x2_sq = sum(x2 ** 2) / len(x2)
+
+	# Denominator term - sqrt(Variance_X1) * sqrt(Variance_X2)
+	denom = np.sqrt(exp_x1_sq - mean_x1 ** 2) * np.sqrt(exp_x2_sq - mean_x2 ** 2)
+
+	return cov / denom
+
+
+def plot_cases_and_gun(cases: pd.DataFrame, gun: pd.DataFrame, fname: str = "") -> None:
+	fig, axs = plt.subplots(2)
+	fig.suptitle("Deaths and Injuries from Gun Violence")
+
+	axs0 = axs[0].twinx()
+	axs0.set_ylabel("COVID Cases")
+	axs[0].set_ylabel("Injuries")
+
+	axs[0].plot(
+		gun.index,
+		gun["injured"].values,
+		"r-",
+	)
+
+	axs0.plot(
+		gun[gun.index.isin(cases.index)].index,
+		cases["cases"].values,
+		label="COVID Cases",
+	)
+	axs[0].legend()
+	axs[0].tick_params(labelrotation=45)
+
+	axs1 = axs[1].twinx()
+	axs1.set_ylabel("COVID Cases")
+	axs1.plot(
+		gun[gun.index.isin(cases.index)].index,
+		cases["cases"].values,
+		"g-",
+		label="COVID Cases",
+	)
+
+	axs[1].set_ylabel("Deaths")
+	axs[1].plot(gun.index, gun["killed"].values, "r-", label="Killed")
+	axs[1].legend()
+	axs[1].tick_params(labelrotation=45)
+
+	fig.tight_layout()
+	if ".png" in fname:
+		plt.savefig(fname)
+	else:
+		plt.show()
+
 
 def walds_test(data: np.array, null_hypothesis: float) -> Tuple[float, float, float]:
 	"""(theta_hat - theta_null) / standard_error(theta_hat)
@@ -38,7 +97,6 @@ def walds_test(data: np.array, null_hypothesis: float) -> Tuple[float, float, fl
 
 def z_test(data: np.array, pop_mean: float, pop_sigma: float) -> Tuple[float, float, float]:
 	"""Calculate (X_bar - mu)/sigma. Return p-value."""
-	# data = scale_data(data)
 	x_bar = sum(data) / len(data)
 	# use scipy.stats.norm ppf to find the critical value for alpha instead of T Table lookup
 	critical_value = -ss.norm.ppf(ALPHA / 2)
@@ -54,7 +112,6 @@ def z_test(data: np.array, pop_mean: float, pop_sigma: float) -> Tuple[float, fl
 
 def t_test(data: np.array, pop_mean: float) -> Tuple[float, float, float]:
 	"""Calculate (X_bar - mu)/(s/√n). Return p-value."""
-	# data = scale_data(data)
 	x_bar = sum(data) / len(data)
 	s_stdev = stddev(data, corrected=True)
 	n_count = len(data)

@@ -1,162 +1,227 @@
+"""For part 3, Exploratory Data Analysis. 
+
+Part A: 
+	Hypothesis 1: Gun violence towards others decreased during COVID: there is an inverse relationship between 
+				  COVID cases and violent gun incidents.
+	
+	Hypothesis 2: 
+	During Covid, is there a correlation between day of the week and whether COVID or 
+	guns are a bigger KILLER. Run chi squared on this. 
+
+Part B:
+Check if gun violence changed after some local event or rule
+ - George Floyd?
+
+"""
 from datetime import datetime
+
+import matplotlib.pyplot as plt
 import pandas as pd
-from utilities import tukey
+import scipy.stats as ss
+from utilities import (
+	pearsons_correlation_coefficient,
+	plot_cases_and_gun,
+	scale_dataset,
+)
 from vax import *
 
-def de_cumulate_column():
+# Use this arbitrary value for pearson correlation analysis
+PEARSON_CRITICAL_VALUE = 0.5
+
+
+def get_diffs(df: pd.DataFrame):
+	df[["cases", "deaths"]] = df[["cases", "deaths"]].diff()
+	return df
+
+
+def part_1(cases: pd.DataFrame, gun_vals: pd.DataFrame):
+	# run pearson correlation
+	"""To run a Pearson's Correlation test, the number of samples must be the same
+	for X and Y RVs. There are more samples of gun violence (1746) data than cases (813). So we
+	need to randomly sample 813 observations from gun violence many times (1000) to test the
+	hypothesis properly.
+	"""
+	rhos_injured = np.zeros(1000)
+	rhos_killed = np.zeros(1000)
+
+	# This part is non-deterministic, may or may not achieve the same results.
+	for i in range(len(rhos_killed)):
+		gun_killed_subset = np.random.choice(gun_vals["killed"].values, size=len(cases))
+
+		rhos_killed[i] = pearsons_correlation_coefficient(
+			scale_dataset(gun_killed_subset), scale_dataset(cases["cases"].values)
+		)
+
+		gun_injured_subset = np.random.choice(gun_vals["injured"], size=len(cases))
+		rhos_injured[i] = pearsons_correlation_coefficient(
+			scale_dataset(gun_injured_subset), scale_dataset(cases["cases"].values)
+		)
+
+	avg_rho_injured = sum(rhos_injured) / len(rhos_injured)
+	avg_rho_killed = sum(rhos_killed) / len(rhos_killed)
+
+	print("Pearson Correlation for violent gun injuries and COVID cases.")
+	reject = "reject" if avg_rho_injured > PEARSON_CRITICAL_VALUE else "do not reject"
+	print(
+		f"With a rho value of {avg_rho_injured}, we {reject} the null hypothesis that gun violence and the COVID-19 pandemic are correlated.\n"
+	)
+
+	print("Pearson Correlation for violent gun deaths and COVID cases.")
+	reject = "reject" if avg_rho_killed > PEARSON_CRITICAL_VALUE else "do not reject"
+	print(
+		f"With a rho value of {avg_rho_killed}, we {reject} the null hypothesis that gun violence and the COVID-19 pandemic are correlated.\n"
+	)
+
+
+def part_2():
 	pass
 
 
-# our states are Massachussetts and Mississippi.
-GROUP_11_STATES = ["MA", "MS"]
-
-
 if __name__ in "__main__":
-	cases_df = pd.read_csv(
+	cases = pd.read_csv(
 		"United_States_COVID-19_Cases_and_Deaths_by_State_over_Time.csv"
 	)
-	vax_df = pd.read_csv("COVID-19_Vaccinations_in_the_United_States_Jurisdiction.csv")
+	vax = pd.read_csv("COVID-19_Vaccinations_in_the_United_States_Jurisdiction.csv")
+	gun = pd.read_csv("US-Gun-Violence.csv")
 
-	# do all this for each state Massachussetts first
-	for state in GROUP_11_STATES:
-		# grab the relevant state
-		cases = cases_df[cases_df["state"] == state]
-		cases = cases.rename(columns={"submission_date": "date"})
-		vax = vax_df[vax_df["Location"] == state]
-		vax = vax.rename(columns={"Location": "state", "Date": "date"})
+	cases = cases.rename(
+		columns={"submission_date": "date", "tot_cases": "cases", "tot_death": "deaths"}
+	)
+	cases["date"] = pd.to_datetime(cases["date"])
+	cases.sort_values("date", inplace=True)
 
-		# update submission date to datetime for sorting
-		cases["date"] = pd.to_datetime(cases["date"])
-		vax["date"] = pd.to_datetime(vax["date"])
+	# remove data after 2021 because that's where our gun data stops
+	cases = cases[cases["date"] <= datetime(2021, 12, 31)]
 
-		# sort by date
-		vax = vax.sort_values("date", ascending=True)
-		cases = cases.sort_values("date", ascending=True)
+	# get daily differences in cases and deaths across the country
+	cases = cases.groupby("date").apply(sum)[["cases", "deaths"]].diff()
+	cases.iloc[0, :] = 0.0
 
-		# extract the data we want
-		to_drop = set(vax.columns) - {'date', 'Administered'}
-		vax.drop(to_drop, axis=1, inplace=True)
+	vax = vax.rename(
+		columns={"Location": "state", "Date": "date", "Administered": "admin"}
+	)
+	vax["date"] = pd.to_datetime(vax["date"])
+	# select out just date, admin, and state field
+	# sort by date
+	vax = vax[["date", "state", "admin"]].sort_values("date", ascending=True)
 
-		# cases columns to diff:
-		cases_cols_to_diff = ["tot_cases", "conf_cases", "prob_cases"]
-		cases.fillna(0, inplace=True)
-		cases[cases_cols_to_diff] = cases[cases_cols_to_diff].diff()
+	gun = gun.rename(columns={"incident_date": "date", "city_or_county": "region"})
+	gun = gun[["date", "killed", "injured"]]
 
-		# vax columns to diff to de-cumulatize things
-		vax['Administered'] = vax['Administered'].diff()
+	# ensure the dates for gun are the same as dates for cases
+	# earliest_case_date = cases["date"].min()
+	gun["date"] = pd.to_datetime(gun["date"])
+	# gun = gun[(gun["date"] >= earliest_case_date)]
 
-		"""
-		## DATA CLEANING - MANDATORY TASK 1 ##
-		NOTE TO ALL: The project prompt for this part says
+	# aggregate violent gun across the country incidents by date
+	gun = gun.groupby("date").apply(sum)[["killed", "injured"]].reset_index()
+	gun.sort_values("date", inplace=True)
 
-		'Comment on your findings both for data cleaning
-		(what issues you found, how you dealt with them) and outlier detection. 
-		This will be 10% of the project grade.'
-		
-		I really didn't have any issues doing this. I either
-		1. Am really good at this due to prior experience with data + pandas and 
-		knew exactly what to do (great, but doesn't help us with this part of the report)
-		2. Missed something by making an assumption I shouldn't have an need to fix this
-		3. Absolutely, unequivocally biffed it.
+	# ASSUMPTION: for days without gun violence reported, fill in a zero.
+	# We do this for a few reasons:
+	# 1. Matches the cases dataset.
+	# 2. Ease of plotting cases vs gun violence.
+	# 3. Naive optimism that nobody in the U.S. got shot that day.
+	gun = gun.set_index("date")
+	# fill in missing dates with NaN
+	gun = gun.asfreq("D")
+	no_gun_data = gun.isna().all(axis=1)
 
-		I mean it's weird how many rows have outliers for the vaccine data. might be worth looking into more.
+	# only keep values where gun violence is reported
+	gun_vals = gun[~no_gun_data]
+	cases_vals = cases[~no_gun_data]
 
-		PLEASE TELL ME IF I NEED TO CHANGE ANYTHING.
+	# Optional:
+	# plot_cases_and_gun(cases, gun.fillna(0), fname="gun_violence_vs_covid_cases.png")
 
-		Andrew comments for vaccine data:
-		Since we are taking the differences between cumulative totals each day,
-		we don't have data for how many vaccines were administered on the first
-		day, so we discard this day from the data set.
-		"""
-		print('Cleaning Vaccine Data in %s' % state)
+	print("Part 1")
+	part_1(cases_vals, gun_vals)
 
-		# dropna() to drop any rows with NaN in them, apply to both datasets
-		cases.dropna(inplace=True)
-		vaxlen = vax.shape[0]
-		vax.dropna(inplace=True)
-		# subtract 
-		print('Missing %d days of vaccine data' % (vaxlen - vax.shape[0] - 1))
+	"""Hypothesis 2: 
+	During Covid, is there a correlation between day of the week and whether COVID or 
+	guns are a bigger KILLER in NY. Run chi squared on this."""
+	gun = pd.read_csv("US-Gun-Violence.csv")
+	gun = gun[gun["state"] == "NY"]
+	gun = gun.rename(columns={"incident_date": "date", "city_or_county": "region"})
+	gun = gun[["date", "killed", "injured"]]
 
-		# worth resetting index at this point to make filtering easier
-		cases = cases.reset_index()
-		vax = vax.reset_index()
+	cases = pd.read_csv(
+		"United_States_COVID-19_Cases_and_Deaths_by_State_over_Time.csv"
+	)
+	cases = cases[cases["state"] == "NY"]
+	cases = cases.rename(
+		columns={"submission_date": "date", "tot_cases": "cases", "tot_death": "deaths"}
+	)
+	cases["date"] = pd.to_datetime(cases["date"])
+	cases.sort_values("date", inplace=True)
 
-		# apply tukey's rule to each column, remove outliers that are non-zero values
-		# transform each data column into a boolean column, take the all-true data
-		"""
-		cases.describe() returns this matrix:
-		-------------------------------------
-				tot_cases	  conf_cases   prob_cases	   new_case  ...	conf_death	 prob_death   new_death  pnew_death
-		count	 832.000000		832.000000	 832.000000    832.000000  ...	  832.000000   832.000000  832.000000  832.000000
-		mean	2123.582933    1955.465144	 168.117788   2121.533654  ...	13281.364183   344.465144	28.931490	 1.367788
-		std		4652.956193    6639.303039	 403.000405   4653.389217  ...	 6510.533026   251.101537	36.587088	11.631706
-		min		   0.000000  -96965.000000	 -26.000000		 0.000000  ...		0.000000	 0.000000	 0.000000	-3.000000
-		25%		 192.750000		 99.750000	   0.000000    192.750000  ...	 8662.000000   205.000000	 4.000000	 0.000000
-		50%		1073.500000		895.500000	  39.500000   1060.000000  ...	16364.000000   335.000000	16.000000	 0.000000
-		75%		2087.750000    1881.000000	 184.000000   2087.750000  ...	18346.000000   387.250000	38.250000	 1.000000
-		max    64715.000000  102762.000000	4505.000000  64715.000000  ...	22980.000000  1138.000000  209.000000  324.000000
-		"""
+	# remove data after 2021 because that's where our gun data stops
+	cases = cases[cases["date"] <= datetime(2021, 12, 31)]
 
-		# First quartile for each column
-		cases_quantile_1 = cases.describe().iloc[4, :]
+	cases = cases.set_index("date")
 
-		# Third quartile for each column
-		cases_quantile_3 = cases.describe().iloc[6, :]
+	# ensure the dates for gun are the same as dates for cases
+	# earliest_case_date = cases["date"].min()
+	gun["date"] = pd.to_datetime(gun["date"])
 
-		# Calculate interquartile range
-		cases_iqr = cases_quantile_3 - cases_quantile_1
+	# focus on covid dates
+	gun_vals = gun_vals[gun_vals.index >= cases.index.min()]
 
-		# Calculate Tukey's rule  # formula is	x < Q1 - alpha * IQR || x > Q3 + alpha * IQR
-		cases_low_outlier = cases_quantile_1 - (1.5 * cases_iqr)
-		cases_high_outlier = cases_quantile_3 + (1.5 * cases_iqr)
+	# pandas .weekday() on date. 0 is Monday, 6 is Sunday
+	gun_vals["weekday"] = gun_vals.index
+	gun_vals["weekday"] = gun_vals["weekday"].apply(lambda x: x.weekday())
 
-		# repeat for vax data
-		print("Applying Tukey's Rule")
-		newvax = tukey(vax, 'Administered')
+	deaths = gun_vals[["killed", "weekday"]]
+	deaths = deaths.rename(columns={"killed": "gunDeaths"})
+	deaths["covidDeaths"] = cases_vals["deaths"]
+	deaths["more_guns_1_more_covid_0"] = (
+		gun_vals["killed"] >= cases_vals["deaths"]
+	).astype(int)
 
-		# find all the row indices where there's an outlier
-		outlier_case_idx = (cases[cases_low_outlier.index] >= cases_low_outlier).all(
-			axis=1
-		) & ((cases[cases_high_outlier.index] <= cases_high_outlier).all(axis=1))
+	# bucket counts
+	weekday_bucket_percentages = deaths["weekday"].value_counts() / len(deaths)
 
-		# keep only rows where there are no outliers
-		cases = cases[outlier_case_idx]
+	death_type_bucket = deaths["more_guns_1_more_covid_0"].value_counts() / len(deaths)
 
-		# count the number of rows with at least 1 outlier in it:
-		#print( f"Rows with outliers in case data: {len(outlier_case_idx) - outlier_case_idx.astype(int).sum()}")
-		#print( f"% Rows with outliers in vaccine data: {(len(outlier_case_idx) - outlier_case_idx.astype(int).sum())/ len(outlier_case_idx)}")
+	# compute q_obs
+	q_obs_gun = {}
+	q_obs_gun[1] = 0
+	q_obs_gun[5] = 0
+	q_obs_cov = {}
+	q_obs_cov[1] = 530
+	q_obs_cov[5] = 530
 
-		print("Rows with outliers in vaccine data: %d" % (vax.shape[0] - newvax.shape[0]))
-		vax = newvax
+	for u in deaths.weekday.unique():
+		q_obs_gun[u] = len(
+			deaths[(deaths.weekday == u) & deaths["more_guns_1_more_covid_0"] == 1]
+		)
+		q_obs_cov[u] = len(
+			deaths[(deaths.weekday == u) & deaths["more_guns_1_more_covid_0"] == 0]
+		)
 
-		print()
+	wd = pd.DataFrame(q_obs_gun.items(), columns=["weekday", "count"])
+	wd = wd.set_index("weekday")
+	cd = pd.DataFrame(q_obs_cov.items(), columns=["weekday", "count"])
+	cd = cd.set_index("weekday")
+	d = pd.merge(wd, cd, left_index=True, right_index=True)
 
-		"""Slash and burn, keep zero values. I admit, I, Dan Billmann, 
-		have not tested the second half of this out.
+	tot_x = d["count_x"].sum()
+	exp_x = tot_x / len(d)
+	tot_y = d["count_y"].sum()
+	exp_y = tot_y / len(d)
 
-		# it's either within the range (both higher AND (&) lower)
-		# OR it's outside the range, ((either higher OR lower) AND equal to zero)
-		((cases[cases_low_outlier.index] >= cases_low_outlier).all(axis=1) & 
-		(cases[cases_high_outlier.index] <= cases_high_outlier).all(axis=1)) |
-		((cases[cases_low_outlier.index] <= cases_low_outlier).all(axis=1) |
-		(cases[cases_high_outlier.index] >= cases_high_outlier).all(axis=1)) &
-		(cases[cases_high_outlier.index] == 0)
-		"""
+	# calculate q_obs
+	d["q_obs_x"] = (exp_x - d["count_x"]) ** 2 / exp_x
+	d["q_obs_y"] = (exp_y - d["count_y"]) ** 2 / exp_y
 
-		### STARTED ANALYSIS PART 1 ###
-		# daily mean daily cases + covid deaths for February 2021
-		#feb_2021 = cases.loc[
-		#	 (cases["date"].dt.month == 2) & (cases["date"].dt.year == 2021)
-		#]
-		#feb_2021_mean_deaths = feb_2021["tot_deaths"].mean()
-		#feb_2021_mean_cases = feb_2021["tot_cases"].mean()
+	# E
+	Q_Obs = d[["q_obs_x", "q_obs_y"]].sum().sum()
+	print(Q_Obs)
 
-		### STARTED PART 2 ###
-		#print(cases.head())
-		#print(vax.head())
+	# calculate dfs
+	deg_free = (len(d) - 1) ** 2
 
-		### PART D ###
-		part_d(vax)
-		
+	p_value = ss.chi2.cdf(Q_Obs, deg_free)
+	print(p_value)
 
-		print()
+	part_2()
