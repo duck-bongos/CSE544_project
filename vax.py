@@ -81,7 +81,7 @@ def part_e(s1, s2, name1, name2):
 		x2 = x2["admin"].to_numpy()
 		t = paired_ttest(x1, x2)
 		print(
-			"Paired T-test for comparing the number of vaccines administered each day in %s and %s during 2022-%d:"
+			"Paired T-test for comparing the number of vaccines administered\neach day in %s and %s during 2022-%d:"
 			% (name1, name2, month)
 		)
 		days = (stop - start).days

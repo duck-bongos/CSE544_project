@@ -39,10 +39,13 @@ def part_a(st: pd.DataFrame, state: str, col: str) -> List[str]:
 
 		if t.__name__ == "z_test":
 			t_stat, p_value, cv = t(data=mar_21[col].values, pop_mean=h0, pop_sigma=pop_sigma)
-
 		should = "SHOULD" if abs(t_stat) > cv else "SHOULD NOT"
-		res = f"State: {state} | For {' '.join(t.__name__.split('_'))}: Null Hypothesis mean: {h0}\nT statistic: {t_stat}, p-value {p_value}, critical value: {cv}\nThis indicates we {should} reject the null hypothesis that the mean #{col} from March is the same as in February.\n"
-		print(res)
+		print(f"State: {state} | For {' '.join(t.__name__.split('_'))}:")
+		print('Size of data set: %d' % len(mar_21[col]))
+		print(f"Null Hypothesis mean: {h0}")
+		print('Critical value: %.6f' % cv)
+		print(f"T statistic: {t_stat}, p-value {p_value}")
+		print(f"This indicates we {should} reject the null hypothesis that\nthe mean #{col} from March is the same as in February.")
 
 	# two sample tests
 	print("""TWO SAMPLE TESTS""")
@@ -57,9 +60,11 @@ def part_a(st: pd.DataFrame, state: str, col: str) -> List[str]:
 				data_1=feb_21[col].values, data_2=mar_21[col].values
 			)
 		should = "SHOULD" if abs(t_stat) > cv else "SHOULD NOT"
-		tsres = f"State: {state} | For {' '.join(ts.__name__.split('_'))}: T statistic: {t_stat}, p-value {p_value}, critical value: {cv}\nThis indicates we {should} reject the null hypothesis that the mean #{col} from March is the same as in February.\n"
-
-		print(tsres)
+		print(f"State: {state} | For {' '.join(ts.__name__.split('_'))}:")
+		print('Size of data sets: %d, %d' % (len(feb_21[col]), len(mar_21[col])))
+		print('Critical value: %.6f' % cv)
+		print(f"T statistic: {t_stat}, p-value {p_value}")
+		print(f"This indicates we {should} reject the null hypothesis that\nthe mean #{col} from March is the same as in February.")
 	print()
 
 def part_b(dfs):
@@ -68,6 +73,7 @@ def part_b(dfs):
 	start = pd.to_datetime('2021-9-1')
 	stop = pd.to_datetime('2022-1-1')
 	for col in dfs[states[0]]:
+		h0 = ' the null hypothesis that the distribution of daily #\nof %s in %s and %s is equal' % (col, states[0], states[1])
 		print('Analyzing %s data' % col)
 		s1 = dfs[states[0]][col]
 		s2 = dfs[states[1]][col]
@@ -82,6 +88,8 @@ def part_b(dfs):
 		print('1 Sample KS-test with Poisson distribution')
 		print('K-S Statistic: %.4f' % ks)
 		print('p-val: %.4f' % p)
+		pref = 'We reject' if p < 0.05 else 'We fail to reject'
+		print(pref + h0)
 
 		# geometric
 		p_mme = 1 / (s1[col].sum() / s1.shape[0])
@@ -91,6 +99,8 @@ def part_b(dfs):
 		print('1 Sample KS-test with Geometric distribution')
 		print('K-S Statistic: %.4f' % ks)
 		print('p-val: %.4f' % p)
+		pref = 'We reject' if p < 0.05 else 'We fail to reject'
+		print(pref + h0)
 
 		# binomial
 		ex = s1[col].sum() / s1.shape[0]
@@ -109,12 +119,16 @@ def part_b(dfs):
 			print('1 Sample KS-test with Binomial distribution')
 			print('K-S Statistic: %.4f' % ks)
 			print('p-val: %.4f' % p)
+			pref = 'We reject' if p < 0.05 else 'We fail to reject'
+			print(pref + h0)
 
 		# 2 sample K-S test
 		ks, p = ks_test2(s1[col], s2[col])
 		print('2 Sample KS-test')
 		print('K-S Statistic: %.4f' % ks)
 		print('p-val: %.4f' % p)
+		pref = 'We reject' if p < 0.05 else 'We fail to reject'
+		print(pref + h0)
 		#plt.figure()
 		#x = s1[col].sort_values()
 		#y = np.linspace(0, 1, num=len(s1[col]))
@@ -128,6 +142,8 @@ def part_b(dfs):
 		p = permutation_test(s1[col], s2[col])
 		print('Permutation Test')
 		print('p-val: %.6f' % p)
+		pref = 'We reject' if p < 0.05 else 'We fail to reject'
+		print(pref + h0)
 	print()
 
 

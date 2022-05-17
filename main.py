@@ -44,7 +44,6 @@ if __name__ in "__main__":
 			st = tukey(st, col)
 			print("Number of rows with outliers: %d" % (stlen - st.shape[0]))
 			dfs[state][col] = st
-		print()
 	sys.stdout.close()
 
 	sys.stdout = open('part_a.log', 'w')
