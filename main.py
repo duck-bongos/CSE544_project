@@ -1,6 +1,13 @@
 from datetime import datetime
 import pandas as pd
-from utilities import tukey, t_test, walds_test, z_test
+from utilities import (
+    tukey,
+    t_test,
+    two_sample_t_test,
+    two_sample_walds_test,
+    walds_test,
+    z_test,
+)
 from vax import *
 import sys
 
@@ -16,6 +23,7 @@ if __name__ in "__main__":
     df.sort_values("date", inplace=True)
     dfs = {st: {} for st in GROUP_11_STATES}
     for state in GROUP_11_STATES:
+        out_to_file = []
         for col in ["cases", "deaths"]:
             print("Cleaning %s data in state %s" % (col, state))
             st = df[["date", "state", col]]
@@ -49,20 +57,51 @@ if __name__ in "__main__":
             ]
 
             # run hypothesis tests assuming D ~ (X1, ... Xn) ~ Poisson(lambda)
-            for t in (t_test, walds_test, z_test):
-                if t.__name__ == "walds_test":
-                    t_stat, p_value = t(data=mar_21[col].values, null_hypothesis=pop_mu)
 
+            for t in (t_test, walds_test, z_test):
                 if t.__name__ == "t_test":
-                    t_stat, p_value = t(data=mar_21[col].values, pop_mean=pop_mu)
+                    t_stat, p_value, cv = t(data=mar_21[col].values, pop_mean=pop_mu)
+
+                if t.__name__ == "walds_test":
+                    t_stat, p_value, cv = t(
+                        data=mar_21[col].values, null_hypothesis=pop_mu
+                    )
 
                 if t.__name__ == "z_test":
-                    t_stat, p_value = t(data=mar_21[col].values, pop_mean=pop_mu)
+                    t_stat, p_value, cv = t(data=mar_21[col].values, pop_mean=pop_mu)
 
-                print(
-                    f"\n{state} | For {' '.join(t.__name__.split('_'))}: Population mean: {pop_mu} Population sigma: {pop_sigma}\nT statistic: {t_stat}, p-value {p_value}\nThis indicates we should reject the sample #{col} from March as being part of the same distribution: {p_value < 0.05}.\n\n"
-                )
+                should = "should" if abs(t_stat) > cv else "should not"
+                res = f"\nState: {state} | For {' '.join(t.__name__.split('_'))}: Population mean: {pop_mu}\nT statistic: {t_stat}, p-value {p_value}, critical value: {cv}\nThis indicates we {should} reject the sample #{col} from March as being part of the same distribution: {abs(t_stat) > cv}.\n\n"
+                out_to_file.append(res)
+                print(res)
 
+                """
+				We are told the data is distributed with a Poisson distribution. 
+				Therefore, Wald's test and Z test should not be applied because 
+				they are both asymptotically normally when valid.
+				"""
+
+            # two sample tests
+            print("""TWO SAMPLE TESTS""")
+            for ts in (two_sample_t_test, two_sample_walds_test):
+                if ts.__name__ == "two_sample_t_test":
+                    t_stat, p_value, cv = ts(
+                        data_1=feb_21[col].values, data_2=mar_21[col].values
+                    )
+
+                if ts.__name__ == "two_sample_walds_test":
+                    t_stat, p_value, cv = ts(
+                        data_1=feb_21[col].values, data_2=mar_21[col].values
+                    )
+                should = "should" if abs(t_stat) > cv else "should not"
+                tsres = f"\nState: {state} | For {' '.join(ts.__name__.split('_'))}: T statistic: {t_stat}, p-value {p_value}, critical value: {cv}\nThis indicates we {should} reject the sample #{col} from March as being part of the same distribution.\n\n"
+
+                out_to_file.append(tsres)
+                print(tsres)
+
+        with open("hypothesis_tests.txt", "w") as ht:
+            for line in out_to_file:
+                ht.write(f"{line}")
         print()
 
     vax = pd.read_csv("COVID-19_Vaccinations_in_the_United_States_Jurisdiction.csv")

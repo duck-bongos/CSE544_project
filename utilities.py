@@ -1,11 +1,15 @@
 from itertools import permutations
+from logging import critical
 from math import ceil
+from statistics import stdev
 from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
 import scipy
 import scipy.stats as ss
+
+ALPHA = 0.05
 
 
 def scale_data(data: np.array):
@@ -48,31 +52,7 @@ def permutation_test(l: List[List[int]], means=True, medians=False):
     return p_value
 
 
-def t_test(data: np.array, pop_mean: float) -> Tuple[float, float]:
-    """Calculate (X_bar - mu)/(s/√n). Return p-value."""
-    # data = scale_data(data)
-    x_bar = np.mean(data)
-    s_stdev = np.std(data)
-    n_count = len(data)
-
-    test_statistic = (x_bar - pop_mean) / (s_stdev / np.sqrt(n_count - 1))
-    test_statistic = abs(test_statistic)
-
-    if len(data) < 30:
-        print("Data size less than 30, using T distribution for T test.")
-        # return test statistic and p-value
-
-        return test_statistic, 2 - (2 * ss.t.cdf(test_statistic))
-
-    else:
-        print(
-            "Data size greater than or equal to 30, using Normal distribution for T test."
-        )
-        # return test statistic and p-value
-        return test_statistic, 2 - (2 * ss.norm.cdf(test_statistic))
-
-
-def walds_test(data: np.array, null_hypothesis: float) -> Tuple[float, float]:
+def walds_test(data: np.array, null_hypothesis: float) -> Tuple[float, float, float]:
     """(theta_hat - theta_null) / standard_error(theta_hat)
 
     Since we're using the MLE of the data for a poisson distribution
@@ -80,19 +60,21 @@ def walds_test(data: np.array, null_hypothesis: float) -> Tuple[float, float]:
     # data = scale_data(data)
     mle_mean = data.mean()
     mle_stdev = data.mean()
+    critical_value = ss.norm.ppf(1 - ALPHA)
 
     # Use n - 1 degrees of freedom
     test_statistic = (mle_mean - null_hypothesis) / (mle_stdev / np.sqrt(len(data) - 1))
 
     # wald's test follows chi squared distribution
-    return test_statistic, 2 - (2 * ss.norm.cdf(test_statistic))
+    return test_statistic, 2 - (2 * ss.norm.cdf(test_statistic)), critical_value
 
 
-def z_test(data: np.array, pop_mean: float) -> Tuple[float, float]:
+def z_test(data: np.array, pop_mean: float) -> Tuple[float, float, float]:
     """Calculate (X_bar - mu)/sigma. Return p-value."""
     # data = scale_data(data)
     x_bar = data.mean()
     pop_stdev = data.std()
+    critical_value = ss.norm.ppf(1 - ALPHA)
 
     if len(data) < 30:
         print("Too few observations to properly run Z test, but we'll try anyways.")
@@ -100,7 +82,78 @@ def z_test(data: np.array, pop_mean: float) -> Tuple[float, float]:
     test_statistic = abs((x_bar - pop_mean)) / pop_stdev
 
     # return test statistic and p-value
-    return test_statistic, 2 - (2 * ss.norm.cdf(test_statistic))
+    return test_statistic, 2 - (2 * ss.norm.cdf(test_statistic)), critical_value
+
+
+def t_test(data: np.array, pop_mean: float) -> Tuple[float, float, float]:
+    """Calculate (X_bar - mu)/(s/√n). Return p-value."""
+    # data = scale_data(data)
+    x_bar = np.mean(data)
+    s_stdev = np.std(data)
+    n_count = len(data)
+    critical_value = ss.t.ppf(1 - ALPHA, df=len(data) - 1)
+
+    if len(data) < 30:
+        print("Data size less than 30, using T distribution for T test.")
+        # return test statistic and p-value
+        test_statistic = (x_bar - pop_mean) / (s_stdev / np.sqrt(n_count - 1))
+        test_statistic = abs(test_statistic)
+        return test_statistic, 2 - (2 * ss.t.cdf(test_statistic)), critical_value
+
+    else:
+        print(
+            "Data size greater than or equal to 30, using Normal distribution for T test."
+        )
+        test_statistic = (x_bar - pop_mean) / (s_stdev / np.sqrt(n_count))
+        test_statistic = abs(test_statistic)
+        # return test statistic and p-value
+        return test_statistic, 2 - (2 * ss.norm.cdf(test_statistic)), critical_value
+
+
+def two_sample_t_test(data_1: np.array, data_2: np.array) -> Tuple[float, float, float]:
+    x_bar_1 = data_1.mean()
+    x_bar_2 = data_2.mean()
+
+    var_1 = data_1.var()
+    var_2 = data_2.var()
+
+    critical_value = ss.t.ppf(1 - ALPHA, df=len(data_1) + len(data_2) - 2)
+
+    # equal or unequal sample sizes, similar variances
+    paired_s = np.sqrt(
+        ((var_1 * len(data_1) - 1) + (var_2 * len(data_2) - 1))
+        / (len(data_1) + len(data_2) - 2)
+    )
+
+    denom = np.sqrt(var_1 / len(data_1)) + (var_2 / len(data_2))
+    # denom = paired_s * np.sqrt((1 / len(data_1)) + (1 / len(data_1)))
+
+    test_statistic = (x_bar_1 - x_bar_2) / denom
+
+    if len(data_1) + len(data_2) < 30:
+        return test_statistic, 2 - (2 * ss.t.cdf(test_statistic)), critical_value
+    else:
+        return test_statistic, 2 - (2 * ss.norm.cdf(test_statistic)), critical_value
+
+
+def two_sample_walds_test(
+    data_1: np.array, data_2: np.array
+) -> Tuple[float, float, float]:
+    x_bar_1 = data_1.mean()
+    x_bar_2 = data_2.mean()
+
+    var_1 = data_1.var()
+    var_2 = data_2.var()
+
+    critical_value = ss.norm.ppf(1 - ALPHA)
+
+    num = x_bar_1 - x_bar_2
+    # standard error
+    denom = np.sqrt((var_1 / len(data_1)) + (var_2 / len(data_2)))
+
+    test_statistic = num / denom
+
+    return test_statistic, 2 - (2 * ss.norm.cdf(test_statistic)), critical_value
 
 
 # manually calculate outliers
