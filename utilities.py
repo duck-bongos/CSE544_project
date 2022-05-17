@@ -72,7 +72,7 @@ def permutation_test(l: List[List[int]], means=True, medians=False):
     return p_value
 
 
-def plot_cases_and_gun(cases: pd.DataFrame, gun: pd.DataFrame) -> None:
+def plot_cases_and_gun(cases: pd.DataFrame, gun: pd.DataFrame, fname: str = "") -> None:
     fig, axs = plt.subplots(2)
     fig.suptitle("Deaths and Injuries from Gun Violence")
 
@@ -109,7 +109,10 @@ def plot_cases_and_gun(cases: pd.DataFrame, gun: pd.DataFrame) -> None:
     axs[1].tick_params(labelrotation=45)
 
     fig.tight_layout()
-    plt.show()
+    if ".png" in fname:
+        plt.savefig(fname)
+    else:
+        plt.show()
 
 
 def walds_test(data: np.array, null_hypothesis: float) -> Tuple[float, float, float]:

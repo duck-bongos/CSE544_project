@@ -1,17 +1,23 @@
 """For part 3, Exploratory Data Analysis. 
 
 Part A: 
-Gun violence towards others decreased during COVID: there is an inverse relationship between 
-COVID cases and violent gun incidents.
+    Hypothesis 1: Gun violence towards others decreased during COVID: there is an inverse relationship between 
+                  COVID cases and violent gun incidents.
+    
+    Hypothesis 2: 
+    During Covid, is there a correlation between day of the week and whether COVID or 
+    guns are a bigger KILLER. Run chi squared on this. 
 
 Part B:
 Check if gun violence changed after some local event or rule
+ - George Floyd?
 
 """
 from datetime import datetime
 
 import matplotlib.pyplot as plt
 import pandas as pd
+import scipy.stats as ss
 from utilities import (
     pearsons_correlation_coefficient,
     plot_cases_and_gun,
@@ -125,9 +131,97 @@ if __name__ in "__main__":
     gun_vals = gun[~no_gun_data]
     cases_vals = cases[~no_gun_data]
 
-    # Optional: plot_cases_and_gun(cases, gun.fillna(0))
+    # Optional:
+    # plot_cases_and_gun(cases, gun.fillna(0), fname="gun_violence_vs_covid_cases.png")
 
     print("Part 1")
     part_1(cases_vals, gun_vals)
+
+    """Hypothesis 2: 
+    During Covid, is there a correlation between day of the week and whether COVID or 
+    guns are a bigger KILLER in NY. Run chi squared on this."""
+    gun = pd.read_csv("US-Gun-Violence.csv")
+    gun = gun[gun["state"] == "NY"]
+    gun = gun.rename(columns={"incident_date": "date", "city_or_county": "region"})
+    gun = gun[["date", "killed", "injured"]]
+
+    cases = pd.read_csv(
+        "United_States_COVID-19_Cases_and_Deaths_by_State_over_Time.csv"
+    )
+    cases = cases[cases["state"] == "NY"]
+    cases = cases.rename(
+        columns={"submission_date": "date", "tot_cases": "cases", "tot_death": "deaths"}
+    )
+    cases["date"] = pd.to_datetime(cases["date"])
+    cases.sort_values("date", inplace=True)
+
+    # remove data after 2021 because that's where our gun data stops
+    cases = cases[cases["date"] <= datetime(2021, 12, 31)]
+
+    cases = cases.set_index("date")
+
+    # ensure the dates for gun are the same as dates for cases
+    # earliest_case_date = cases["date"].min()
+    gun["date"] = pd.to_datetime(gun["date"])
+
+    # focus on covid dates
+    gun_vals = gun_vals[gun_vals.index >= cases.index.min()]
+
+    # pandas .weekday() on date. 0 is Monday, 6 is Sunday
+    gun_vals["weekday"] = gun_vals.index
+    gun_vals["weekday"] = gun_vals["weekday"].apply(lambda x: x.weekday())
+
+    deaths = gun_vals[["killed", "weekday"]]
+    deaths = deaths.rename(columns={"killed": "gunDeaths"})
+    deaths["covidDeaths"] = cases_vals["deaths"]
+    deaths["more_guns_1_more_covid_0"] = (
+        gun_vals["killed"] >= cases_vals["deaths"]
+    ).astype(int)
+
+    # bucket counts
+    weekday_bucket_percentages = deaths["weekday"].value_counts() / len(deaths)
+
+    death_type_bucket = deaths["more_guns_1_more_covid_0"].value_counts() / len(deaths)
+
+    # compute q_obs
+    q_obs_gun = {}
+    q_obs_gun[1] = 0
+    q_obs_gun[5] = 0
+    q_obs_cov = {}
+    q_obs_cov[1] = 530
+    q_obs_cov[5] = 530
+
+    for u in deaths.weekday.unique():
+        q_obs_gun[u] = len(
+            deaths[(deaths.weekday == u) & deaths["more_guns_1_more_covid_0"] == 1]
+        )
+        q_obs_cov[u] = len(
+            deaths[(deaths.weekday == u) & deaths["more_guns_1_more_covid_0"] == 0]
+        )
+
+    wd = pd.DataFrame(q_obs_gun.items(), columns=["weekday", "count"])
+    wd = wd.set_index("weekday")
+    cd = pd.DataFrame(q_obs_cov.items(), columns=["weekday", "count"])
+    cd = cd.set_index("weekday")
+    d = pd.merge(wd, cd, left_index=True, right_index=True)
+
+    tot_x = d["count_x"].sum()
+    exp_x = tot_x / len(d)
+    tot_y = d["count_y"].sum()
+    exp_y = tot_y / len(d)
+
+    # calculate q_obs
+    d["q_obs_x"] = (exp_x - d["count_x"]) ** 2 / exp_x
+    d["q_obs_y"] = (exp_y - d["count_y"]) ** 2 / exp_y
+
+    # E
+    Q_Obs = d[["q_obs_x", "q_obs_y"]].sum().sum()
+    print(Q_Obs)
+
+    # calculate dfs
+    deg_free = (len(d) - 1) ** 2
+
+    p_value = ss.chi2.cdf(Q_Obs, deg_free)
+    print(p_value)
 
     part_2()
