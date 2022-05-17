@@ -31,34 +31,36 @@ if __name__ in "__main__":
             st = tukey(st, col)
             print("Number of rows with outliers: %d" % (stlen - st.shape[0]))
             dfs[state][col] = st
+
             #### PART A ####
             feb_21 = st[
                 (st["date"] >= datetime(2021, 2, 1))
                 & (st["date"] <= datetime(2021, 2, 28))
             ]
+
+            # get population means and standard deviations, which we get from February
+            pop_mu = feb_21[col].mean()
+            pop_sigma = feb_21[col].std()
+
+            # get sample data
             mar_21 = st[
                 (st["date"] >= datetime(2021, 3, 1))
                 & (st["date"] <= datetime(2021, 3, 31))
             ]
 
-            # get population means and standard deviations
-            pop_mu = np.mean(df[col])
-            pop_stdev = np.std(df[col])
-            null_hypo = float(0)
-
-            # run hypothesis tests
+            # run hypothesis tests assuming D ~ (X1, ... Xn) ~ Poisson(lambda)
             for t in (t_test, walds_test, z_test):
-                if walds_test:
-                    null_hypo = pop_mu
-                feb_test_stat, feb_p_val = t(
-                    feb_21[col],
-                    pop_mean=pop_mu,
-                    **{"pop_stdev": pop_stdev, "null_hypo": null_hypo}
-                )
-                mar_test_stat, mar_p_val = t(
-                    mar_21[col],
-                    pop_mean=pop_mu,
-                    **{"pop_stdev": pop_stdev, "null_hypo": null_hypo}
+                if t.__name__ == "walds_test":
+                    t_stat, p_value = t(data=mar_21[col].values, null_hypothesis=pop_mu)
+
+                if t.__name__ == "t_test":
+                    t_stat, p_value = t(data=mar_21[col].values, pop_mean=pop_mu)
+
+                if t.__name__ == "z_test":
+                    t_stat, p_value = t(data=mar_21[col].values, pop_mean=pop_mu)
+
+                print(
+                    f"\n{state} | For {' '.join(t.__name__.split('_'))}: Population mean: {pop_mu} Population sigma: {pop_sigma}\nT statistic: {t_stat}, p-value {p_value}\nThis indicates we should reject the sample #{col} from March as being part of the same distribution: {p_value < 0.05}.\n\n"
                 )
 
         print()

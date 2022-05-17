@@ -4,7 +4,13 @@ from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
+import scipy
 import scipy.stats as ss
+
+
+def scale_data(data: np.array):
+    max_val = data.max()
+    return data / max_val
 
 
 def permutation_test(l: List[List[int]], means=True, medians=False):
@@ -44,34 +50,57 @@ def permutation_test(l: List[List[int]], means=True, medians=False):
 
 def t_test(data: np.array, pop_mean: float) -> Tuple[float, float]:
     """Calculate (X_bar - mu)/(s/√n). Return p-value."""
+    # data = scale_data(data)
     x_bar = np.mean(data)
     s_stdev = np.std(data)
     n_count = len(data)
 
-    test_statistic = (x_bar - pop_mean) / (s_stdev / np.sqrt(n_count))
+    test_statistic = (x_bar - pop_mean) / (s_stdev / np.sqrt(n_count - 1))
     test_statistic = abs(test_statistic)
 
-    # return test statistic and p-value
-    return test_statistic, ss.t.cdf(test_statistic)
-
-
-def walds_test(data: np.array, null_hypo_value):
-    """(theta_hat - theta_null) / standard_error(theta_hat)"""
-    # return test statistic and p-value
-    return data, null_hypo_value
-
-
-def z_test(data: np.array, pop_mean: float, pop_stdev: float):
-    """Calculate (X_bar - mu)/sigma. Return p-value."""
     if len(data) < 30:
-        print("Too few observations to properly run Z test")
-        return
-    else:
-        x_bar = data.mean()
-        test_statistic = abs((x_bar - pop_mean)) / pop_stdev
-
+        print("Data size less than 30, using T distribution for T test.")
         # return test statistic and p-value
-        return test_statistic, 2 * (1 - ss.norm.cdf(test_statistic))
+
+        return test_statistic, 2 - (2 * ss.t.cdf(test_statistic))
+
+    else:
+        print(
+            "Data size greater than or equal to 30, using Normal distribution for T test."
+        )
+        # return test statistic and p-value
+        return test_statistic, 2 - (2 * ss.norm.cdf(test_statistic))
+
+
+def walds_test(data: np.array, null_hypothesis: float) -> Tuple[float, float]:
+    """(theta_hat - theta_null) / standard_error(theta_hat)
+
+    Since we're using the MLE of the data for a poisson distribution
+    the sample mean and sample standard deviation are the same value."""
+    # data = scale_data(data)
+    mle_mean = data.mean()
+    mle_stdev = data.mean()
+
+    # Use n - 1 degrees of freedom
+    test_statistic = (mle_mean - null_hypothesis) / (mle_stdev / np.sqrt(len(data) - 1))
+
+    # wald's test follows chi squared distribution
+    return test_statistic, 2 - (2 * ss.norm.cdf(test_statistic))
+
+
+def z_test(data: np.array, pop_mean: float) -> Tuple[float, float]:
+    """Calculate (X_bar - mu)/sigma. Return p-value."""
+    # data = scale_data(data)
+    x_bar = data.mean()
+    pop_stdev = data.std()
+
+    if len(data) < 30:
+        print("Too few observations to properly run Z test, but we'll try anyways.")
+
+    test_statistic = abs((x_bar - pop_mean)) / pop_stdev
+
+    # return test statistic and p-value
+    return test_statistic, 2 - (2 * ss.norm.cdf(test_statistic))
 
 
 # manually calculate outliers
