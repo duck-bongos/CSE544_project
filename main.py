@@ -30,6 +30,9 @@ if __name__ in "__main__":
 			dfs[state][col] = st
 		print()
 	
+	### PART B ###
+	part_b(dfs)
+
 	### PART C ###
 	part_c(dfs)
 
