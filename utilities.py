@@ -9,7 +9,7 @@ import pandas as pd
 import scipy
 import scipy.stats as ss
 
-ALPHA = 0.05
+ALPHA = 0.025
 
 
 def scale_data(data: np.array):
@@ -60,6 +60,7 @@ def walds_test(data: np.array, null_hypothesis: float) -> Tuple[float, float, fl
     # data = scale_data(data)
     mle_mean = data.mean()
     mle_stdev = data.mean()
+    # use scipy.stats.norm ppf to find the critical value for alpha instead of T Table lookup
     critical_value = ss.norm.ppf(1 - ALPHA)
 
     # Use n - 1 degrees of freedom
@@ -74,6 +75,7 @@ def z_test(data: np.array, pop_mean: float) -> Tuple[float, float, float]:
     # data = scale_data(data)
     x_bar = data.mean()
     pop_stdev = data.std()
+    # use scipy.stats.norm ppf to find the critical value for alpha instead of T Table lookup
     critical_value = ss.norm.ppf(1 - ALPHA)
 
     if len(data) < 30:
@@ -91,6 +93,7 @@ def t_test(data: np.array, pop_mean: float) -> Tuple[float, float, float]:
     x_bar = np.mean(data)
     s_stdev = np.std(data)
     n_count = len(data)
+    # use scipy.stats.norm ppf to find the critical value for alpha instead of T Table lookup
     critical_value = ss.t.ppf(1 - ALPHA, df=len(data) - 1)
 
     if len(data) < 30:
@@ -117,6 +120,7 @@ def two_sample_t_test(data_1: np.array, data_2: np.array) -> Tuple[float, float,
     var_1 = data_1.var()
     var_2 = data_2.var()
 
+    # use scipy.stats.norm ppf to find the critical value for alpha instead of T Table lookup
     critical_value = ss.t.ppf(1 - ALPHA, df=len(data_1) + len(data_2) - 2)
 
     # equal or unequal sample sizes, similar variances
@@ -145,6 +149,7 @@ def two_sample_walds_test(
     var_1 = data_1.var()
     var_2 = data_2.var()
 
+    # use scipy.stats.norm ppf to find the critical value for alpha instead of T Table lookup
     critical_value = ss.norm.ppf(1 - ALPHA)
 
     num = x_bar_1 - x_bar_2

@@ -57,7 +57,7 @@ if __name__ in "__main__":
             ]
 
             # run hypothesis tests assuming D ~ (X1, ... Xn) ~ Poisson(lambda)
-
+            print(\n\n"PART A")
             for t in (t_test, walds_test, z_test):
                 if t.__name__ == "t_test":
                     t_stat, p_value, cv = t(data=mar_21[col].values, pop_mean=pop_mu)
@@ -70,8 +70,8 @@ if __name__ in "__main__":
                 if t.__name__ == "z_test":
                     t_stat, p_value, cv = t(data=mar_21[col].values, pop_mean=pop_mu)
 
-                should = "should" if abs(t_stat) > cv else "should not"
-                res = f"\nState: {state} | For {' '.join(t.__name__.split('_'))}: Population mean: {pop_mu}\nT statistic: {t_stat}, p-value {p_value}, critical value: {cv}\nThis indicates we {should} reject the sample #{col} from March as being part of the same distribution: {abs(t_stat) > cv}.\n\n"
+                should = "SHOULD" if abs(t_stat) > cv else "SHOULD NOT"
+                res = f"\nState: {state} | For {' '.join(t.__name__.split('_'))}: Population mean: {pop_mu}\nT statistic: {t_stat}, p-value {p_value}, critical value: {cv}\nThis indicates we {should} reject the sample #{col} from March as being part of the same distribution.\n\n"
                 out_to_file.append(res)
                 print(res)
 
@@ -93,7 +93,7 @@ if __name__ in "__main__":
                     t_stat, p_value, cv = ts(
                         data_1=feb_21[col].values, data_2=mar_21[col].values
                     )
-                should = "should" if abs(t_stat) > cv else "should not"
+                should = "SHOULD" if abs(t_stat) > cv else "SHOULD NOT"
                 tsres = f"\nState: {state} | For {' '.join(ts.__name__.split('_'))}: T statistic: {t_stat}, p-value {p_value}, critical value: {cv}\nThis indicates we {should} reject the sample #{col} from March as being part of the same distribution.\n\n"
 
                 out_to_file.append(tsres)
