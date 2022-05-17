@@ -19,14 +19,13 @@ from utilities import (
 )
 from vax import *
 
+# Use this arbitrary value for pearson correlation analysis
+PEARSON_CRITICAL_VALUE = 0.5
+
 
 def get_diffs(df: pd.DataFrame):
     df[["cases", "deaths"]] = df[["cases", "deaths"]].diff()
     return df
-
-
-# our states are Massachussetts and Mississippi.
-GROUP_11_STATES = ["MA", "MS"]
 
 
 def part_1(cases: pd.DataFrame, gun_vals: pd.DataFrame):
@@ -54,10 +53,22 @@ def part_1(cases: pd.DataFrame, gun_vals: pd.DataFrame):
 
     avg_rho_injured = sum(rhos_injured) / len(rhos_injured)
     avg_rho_killed = sum(rhos_killed) / len(rhos_killed)
+
     print("Pearson Correlation for violent gun injuries and COVID cases.")
-    print(avg_rho_injured)
+    reject = "reject" if avg_rho_injured > PEARSON_CRITICAL_VALUE else "do not reject"
+    print(
+        f"With a rho value of {avg_rho_injured}, we {reject} the null hypothesis that gun violence and the COVID-19 pandemic are correlated.\n"
+    )
+
     print("Pearson Correlation for violent gun deaths and COVID cases.")
-    print(avg_rho_killed)
+    reject = "reject" if avg_rho_killed > PEARSON_CRITICAL_VALUE else "do not reject"
+    print(
+        f"With a rho value of {avg_rho_killed}, we {reject} the null hypothesis that gun violence and the COVID-19 pandemic are correlated.\n"
+    )
+
+
+def part_2():
+    pass
 
 
 if __name__ in "__main__":
@@ -109,9 +120,14 @@ if __name__ in "__main__":
     # fill in missing dates with NaN
     gun = gun.asfreq("D")
     no_gun_data = gun.isna().all(axis=1)
+
+    # only keep values where gun violence is reported
     gun_vals = gun[~no_gun_data]
+    cases_vals = cases[~no_gun_data]
 
     # Optional: plot_cases_and_gun(cases, gun.fillna(0))
 
     print("Part 1")
-    part_1(cases, gun_vals)
+    part_1(cases_vals, gun_vals)
+
+    part_2()
